@@ -31,5 +31,13 @@ long long diffieHellman();
 
 long long giantBabyStep(const long long& a, const long long& p, const long long& y);
 
+bool isPrime(const long long &number, const int &accuracy = 10);
+
+long long genPrime(long long min, long long max);
+long long genPrimePandQ();
+long long genMutuallyPrime(const long long& P);
+
+long long genPrimitiveRoot(const long long &P);
+
 
 #endif //CRYPTO_LIB_HPP

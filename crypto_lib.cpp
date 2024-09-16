@@ -124,7 +124,7 @@ bool miillerTest(long long d, const long long &n)
     return false;
 }
 
-bool isPrime(const long long &number, const int &accuracy = 10)
+bool isPrime(const long long &number, const int &accuracy)
 {
     if (number <= 1 || number == 4)
         return false;
@@ -145,7 +145,7 @@ bool isPrime(const long long &number, const int &accuracy = 10)
     return true;
 }
 
-long long genPrime()
+long long genPrimePandQ()
 {
     std::uniform_int_distribution<long long unsigned> distribution(100000, 1000000000);
 
@@ -161,9 +161,34 @@ long long genPrime()
     }
 }
 
+long long genPrime(long long min, long long max)
+{
+    std::uniform_int_distribution<long long unsigned> distribution(min, max);
+
+    while (1)
+    {
+        long long Q = distribution(generator);
+        if (isPrime(Q))
+        {
+            return Q;
+        }
+    }
+}
+
+long long genMutuallyPrime(const long long& P)
+{
+    std::uniform_int_distribution<long long unsigned> distribution(100000, P-1);
+    while(true)
+    {
+        long long number = distribution(generator);
+        Euclid euqlid(number, P);
+        if (euqlid.gcd() == 1) return number;
+    }
+}
+
 long long genPrimitiveRoot(const long long &P)
 {
-    std::uniform_int_distribution<long long> distribution(2, P - 2);
+    std::uniform_int_distribution<long long> distribution(2, P - 1);
 
     while (1)
     {
@@ -175,7 +200,7 @@ long long genPrimitiveRoot(const long long &P)
 
 long long diffieHellman()
 {
-    long long P = genPrime();
+    long long P = genPrimePandQ();
     long long g = genPrimitiveRoot(P);
     std::cout << "P = " << P << " | g = " << g << std::endl;
     std::uniform_int_distribution<long long> distribution(1, P - 1);
@@ -188,14 +213,6 @@ long long diffieHellman()
     long long Zab = modulPow(Yb, Xa, P);
     long long Zba = modulPow(Ya, Xb, P);
     std::cout << "Zab = " << Zab << " | Zba = " << Zba << std::endl;
-    if (Zab == Zba)
-    {
-        std::cout << "ALL GOOD!" << std::endl;
-    }
-    else
-    {
-        std::cout << "BAD =(" << std::endl;
-    }
     return Zab;
 }
 
