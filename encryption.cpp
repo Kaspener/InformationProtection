@@ -1,79 +1,236 @@
 #include "encryption.hpp"
 #include <iostream>
 #include <random>
+#include <unordered_map>
+#include <sstream>
 
 static std::random_device rd;
 
 static std::default_random_engine generator(rd());
 
-void ShamirEncode()
+std::unordered_map<std::string, long long> ShamirEncode(const std::string& input_file, const std::string& output_file)
 {
+    std::ifstream file(input_file, std::ios::binary);
+    if (!file.is_open()) {
+        exit(1);
+    }
+
+    std::vector<int> m;
+    char ch;
+    while (file.get(ch)) {
+        m.push_back(static_cast<unsigned char>(ch));
+    }
+    file.close();
+
+    std::unordered_map<std::string, long long> mp;
     long long P = genPrime(100000, 1000000000);
     long long Ca = genMutuallyPrime(P-1);
     Euclid euclid(P, Ca);
     long long Da = inversion(Ca, P-1);
     long long Cb = genMutuallyPrime(P-1);
     long long Db = inversion(Cb, P-1);
-    std::uniform_int_distribution<long long unsigned> distribution(100000, P-1);
-    long long message = distribution(generator);
-    long long x1 = modulPow(message, Ca, P);
-    long long x2 = modulPow(x1, Cb, P);
-    long long x3 = modulPow(x2, Da, P);
-    long long x4 = modulPow(x3, Db, P);
-    std::cout << "P = " << P << std::endl;
-    std::cout << "Ca = " << Ca << "\t\tCb = " << Cb << std::endl;
-    std::cout << "Da = " << Da << "\t\tDb = " << Db << std::endl;
-    std::cout << "Message = " << message << std::endl;
-    std::cout << "A calculate x1 = " << x1 << std::endl;
-    std::cout << "B calculate x2 = " << x2 << std::endl;
-    std::cout << "A calculate x3 = " << x3 << std::endl;
-    std::cout << "B calculate x4 = " << x4 << std::endl;
+
+    std::ofstream encode_file(output_file, std::ios::out);
+    if (!encode_file.is_open()) {
+        exit(1);
+    }
+
+    for(int part : m){
+        long long x1 = modulPow(part, Ca, P);
+        long long x2 = modulPow(x1, Cb, P);
+        long long x3 = modulPow(x2, Da, P);
+        encode_file << x3 << " ";
+    }
+    mp["P"] = P;
+    mp["Ca"] = Ca;
+    mp["Cb"] = Cb;
+    mp["Da"] = Da;
+    mp["Db"] = Db;
+    return mp;
 }
 
-void Elgamal()
+void ShamirDecode(std::unordered_map<std::string, long long>& key, const std::string& input_file, const std::string& output_file){
+    std::ifstream file(input_file, std::ios::in);
+    if (!file.is_open()) {
+        exit(1);
+    }
+
+    std::vector<int> x3;
+    int temp;
+    while (file >> temp) {
+        x3.push_back(temp);
+    }
+    file.close();
+
+    int p = key["P"];
+    int Db = key["Db"];
+
+    std::ofstream decode_file(output_file, std::ios::binary);
+    if (!decode_file.is_open()) {
+        exit(1);
+    }
+
+    for (int part : x3) {
+        int x4 = modulPow(part, Db, p);
+        decode_file.put(static_cast<char>(x4));
+    }
+
+    decode_file.close();
+}
+
+std::unordered_map<std::string, long long> ElgamalEncode(const std::string& input_file, const std::string& output_file)
 {
+    std::ifstream file(input_file, std::ios::binary);
+    if (!file.is_open()) {
+        exit(1);
+    }
+
+    std::vector<int> m;
+    char ch;
+    while (file.get(ch)) {
+        m.push_back(static_cast<unsigned char>(ch));
+    }
+    file.close();
+
+    std::unordered_map<std::string, long long> mp;
+
     long long P = genPrimePandQ();
     long long g = genPrimitiveRoot(P);
     std::uniform_int_distribution<long long unsigned> distribution(100000, P-2);
     long long k = distribution(generator);
     long long r = modulPow(g, k, P);
-    long long message = distribution(generator);
     long long Ca = distribution(generator);
     long long Da = modulPow(g, Ca, P);
     long long Cb = distribution(generator);
     long long Db = modulPow(g, Cb, P);
-    long long e = ((message%P) * modulPow(Db, k, P))%P; 
-    long long newMessage = ((e%P) * modulPow(r, P-1-Cb, P))%P;
-    std::cout << "P = " << P << std::endl;
-    std::cout << "Ca = " << Ca << "\t\tCb = " << Cb << std::endl;
-    std::cout << "Da = " << Da << "\t\tDb = " << Db << std::endl;
-    std::cout << "Message = " << message << std::endl;
-    std::cout << "k = " << k << std::endl;
-    std::cout << "r = " << r << std::endl;
-    std::cout << "e = " << e << std::endl;
-    std::cout << "New message = " << newMessage << std::endl;
+
+    std::ofstream encode_file(output_file, std::ios::out);
+    if (!encode_file.is_open()) {
+        exit(1);
+    }
+
+    for(int part : m){
+        long long e = ((part%P) * modulPow(Db, k, P))%P; 
+        encode_file << e << " ";
+    }
+    mp["P"] = P;
+    mp["r"] = r;
+    mp["Cb"] = Cb;
+    return mp;
 }
 
-void Vernam(const std::string& message)
+void ElgamalDecode(std::unordered_map<std::string, long long> &key, const std::string &input_file, const std::string &output_file)
 {
-    srand(time(0));
-    std::string code;
-    std::string key;
-    code.resize(message.length());
-    key.resize(message.length());
-    for(int i = 0; i < message.length(); ++i){
-        key[i] = rand()%256;
-        code[i] = key[i] ^ message[i];
+    std::ifstream file(input_file, std::ios::in);
+    if (!file.is_open()) {
+        exit(1);
     }
-    std::cout << "Code: " << code << std::endl;
-    for(int i = 0; i < message.length(); ++i){
-        code[i] ^= key[i];
+
+    std::vector<int> x3;
+    int temp;
+    while (file >> temp) {
+        x3.push_back(temp);
     }
-    std::cout << "Decode: " << code << std::endl;
+    file.close();
+
+    int P = key["P"];
+    int Cb = key["Cb"];
+    int r = key["r"];
+
+    std::ofstream decode_file(output_file, std::ios::binary);
+    if (!decode_file.is_open()) {
+        exit(1);
+    }
+
+    for (int part : x3) {
+        int x4 = ((part%P) * modulPow(r, P-1-Cb, P))%P;
+        decode_file.put(static_cast<char>(x4));
+    }
+
+    decode_file.close();
 }
 
-void RSA()
+std::vector<long long> VernamEncode(const std::string& input_file, const std::string& output_file) {
+    std::ifstream file(input_file, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Cannot open file: " + input_file);
+    }
+
+    std::vector<long long> content((std::istreambuf_iterator<char>(file)),
+                              std::istreambuf_iterator<char>());
+    file.close();
+
+    std::vector<long long> codes;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+
+    for (size_t i = 0; i < content.size(); ++i) {
+        codes.push_back(dis(gen));
+    }
+    
+    std::vector<int> encoded;
+    for (size_t i = 0; i < content.size(); ++i) {
+        encoded.push_back(content[i] ^ codes[i]);
+    }
+
+    std::ofstream fileout(output_file, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Cannot write to file: " + output_file);
+    }
+    
+    for (long long byte : encoded) {
+        fileout.put(static_cast<char>(byte));
+    }
+
+    fileout.close();
+    
+    return codes;
+}
+
+void VernamDecode(std::vector<long long>& key, const std::string& input_file, const std::string& output_file) {
+    std::vector<long long> decoded;
+    std::ifstream file(input_file, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Cannot open file: " + input_file);
+    }
+
+    std::vector<long long> content((std::istreambuf_iterator<char>(file)),
+                              std::istreambuf_iterator<char>());
+    file.close();
+    if (key.size() != content.size()) {
+        throw std::runtime_error("Invalid key size for Vernam decryption.");
+    }
+    for (size_t i = 0; i < content.size(); ++i) {
+        decoded.push_back(content[i] ^ key[i]);
+    }
+    
+    std::ofstream fileout(output_file, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Cannot write to file: " + output_file);
+    }
+    
+    for (long long byte : decoded) {
+        fileout.put(static_cast<char>(byte));
+    }
+
+    fileout.close();
+}
+
+std::unordered_map<std::string, long long> RSAEncode(const std::string &input_file, const std::string &output_file)
 {
+    std::ifstream file(input_file, std::ios::binary);
+    if (!file.is_open()) {
+        exit(1);
+    }
+
+    std::vector<int> message;
+    char ch;
+    while (file.get(ch)) {
+        message.push_back(static_cast<unsigned char>(ch));
+    }
+    file.close();
+
     long long Pa = genPrime(1000, 50000);
     long long Qa = genPrime(1000, 50000);
     long long Na = Pa*Qa;
@@ -86,19 +243,49 @@ void RSA()
     long long fib = (Pb-1)*(Qb-1);
     long long db = genMutuallyPrime(fib);
     long long cb = inversion(db, fib);
-    std::uniform_int_distribution<long long unsigned> distribution(1000, Nb-1);
-    long long message = distribution(generator);
 
-    std::cout << "Pa = " << Pa << "\t\tPb = " << Pb << std::endl;
-    std::cout << "Qa = " << Qa << "\t\tQb = " << Qb << std::endl;
-    std::cout << "Na = " << Na << "\t\tNb = " << Nb << std::endl;
-    std::cout << "fia = " << fia << "\t\tfib = " << fib << std::endl;
-    std::cout << "da = " << da << "\t\tdb = " << db << std::endl;
-    std::cout << "ca = " << ca << "\t\tcb = " << cb << std::endl;
-    std::cout << "Message = " << message << std::endl;
-    long long e = modulPow(message, db, Nb);
-    std::cout << "E = " << e << std::endl;
-    long long newMessage = modulPow(e, cb, Nb);
-    
-    std::cout << "New message = " << message << std::endl;
+    std::unordered_map<std::string, long long> mp;
+
+    std::ofstream encode_file(output_file, std::ios::out);
+    if (!encode_file.is_open()) {
+        exit(1);
+    }
+
+    for(int m : message){
+        long long e = modulPow(m, db, Nb);
+        encode_file << e << " ";
+    }
+    mp["cb"] = cb;
+    mp["Nb"] = Nb;
+    return mp;
+}
+
+void RSADecode(std::unordered_map<std::string, long long> &key, const std::string &input_file, const std::string &output_file)
+{
+    std::ifstream file(input_file, std::ios::in);
+    if (!file.is_open()) {
+        exit(1);
+    }
+
+    std::vector<int> x3;
+    int temp;
+    while (file >> temp) {
+        x3.push_back(temp);
+    }
+    file.close();
+
+    long long cb = key["cb"];
+    long long Nb = key["Nb"];
+
+    std::ofstream decode_file(output_file, std::ios::binary);
+    if (!decode_file.is_open()) {
+        exit(1);
+    }
+
+    for (int part : x3) {
+        int x4 = modulPow(part, cb, Nb);
+        decode_file.put(static_cast<char>(x4));
+    }
+
+    decode_file.close();
 }
