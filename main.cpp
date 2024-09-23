@@ -1,23 +1,34 @@
 #include <iostream>
-#include "encryption.hpp"
-#include <vector>
-#include <fstream>
+#include "signs.hpp"
 
-void encodeAndDecodeFiles(){
-    std::string filename = "file.txt";
-    
-    auto key = ShamirEncode(filename, "shamir_encode.txt");
-    ShamirDecode(key, "shamir_encode.txt", "shamir_decode.txt");
-    auto key2 = ElgamalEncode(filename, "elgamal_encode.txt");
-    ElgamalDecode(key2, "elgamal_encode.txt", "elgamal_decode.txt");
-    std::vector<long long> key3 = VernamEncode(filename, "vernam_encode.txt");
-    VernamDecode(key3, "vernam_encode.txt", "vernam_decode.txt");
-    auto key4 = RSAEncode(filename, "RSA_encode.txt");
-    RSADecode(key4, "RSA_encode.txt", "RSA_decode.txt");
-}
+const std::string RED = "\033[31m";
+const std::string GREEN = "\033[32m";
+const std::string RESET = "\033[0m";
 
 int main()
 {
-    encodeAndDecodeFiles();
+    std::string filename = "file.txt";
+    std::string fileBad = "fileBad.txt";
+    std::unordered_map<std::string, long long> mp = RSA_sign(filename);
+    if (RSA_sign_check(filename, mp)){
+        std::cout << GREEN << "Correct RSA sign" << RESET << std::endl;
+    }
+    if (!RSA_sign_check(fileBad, mp)){
+        std::cout << RED << "ERROR RSA sign" << RESET << std::endl;
+    }
+    std::unordered_map<std::string, long long> mp2 = Elgamal_sign(filename);
+    if (Elgamal_sign_check(filename, mp2)){
+        std::cout << GREEN << "Correct Elgamal sign" << RESET << std::endl;
+    }
+    if (!Elgamal_sign_check(fileBad, mp2)){
+        std::cout << RED << "ERROR Elgamal sign" << RESET << std::endl;
+    }
+    std::unordered_map<std::string, long long> mp3 = GOST_sign(filename);
+    if (GOST_sign_check(filename, mp3)){
+        std::cout << GREEN << "Correct GOST sign" << RESET << std::endl;
+    }
+    if (!GOST_sign_check(fileBad, mp3)){
+        std::cout << RED << "ERROR GOST sign" << RESET << std::endl;
+    }
     return 0;
 }

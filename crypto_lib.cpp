@@ -105,6 +105,8 @@ bool miillerTest(long long d, const long long &n)
 {
     int a = 2 + rand() % (n - 4);
 
+    if (d < 0) return false;
+
     int x = modulPow(a, d, n);
 
     if (x == 1 || x == n - 1)
@@ -147,7 +149,7 @@ bool isPrime(const long long &number, const int &accuracy)
 
 long long genPrimePandQ()
 {
-    std::uniform_int_distribution<long long unsigned> distribution(100000, 1000000000);
+    std::uniform_int_distribution<long long unsigned> distribution(100002, 1000000000);
 
     while (1)
     {
@@ -177,7 +179,7 @@ long long genPrime(long long min, long long max)
 
 long long genMutuallyPrime(const long long& P)
 {
-    std::uniform_int_distribution<long long unsigned> distribution(100000, P-1);
+    std::uniform_int_distribution<long long unsigned> distribution(2, P-2);
     while(true)
     {
         long long number = distribution(generator);
