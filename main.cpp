@@ -270,10 +270,11 @@ bool Graph::operator==(const Graph &other)
     return true;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    if(argc != 2) return -1; 
     RSA *rsa = nullptr;
-    Graph G = getGraphFromFile("file1.txt");
+    Graph G = getGraphFromFile(std::string(argv[1]));
     std::cout << "START GRAPH:" << std::endl;
     G.print();
     std::cout << "----------------------------ALICE------------------------------" << std::endl;
